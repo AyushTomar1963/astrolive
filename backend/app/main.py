@@ -386,6 +386,12 @@ def _startup() -> None:
     mail.warn_if_unconfigured()
 
 
+@app.api_route("/", methods=["GET", "HEAD"])
+@app.api_route("/health", methods=["GET", "HEAD"])
+def root() -> dict[str, str]:
+    return {"status": "ok", "service": "AstroLive API", "health": "/api/health"}
+
+
 @app.get("/api/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "engine": "lahiri-sidereal"}
@@ -772,3 +778,15 @@ def melapak_join(
     if new_guest:
         attach_session_cookie(response, create_session(guest["id"], request.headers.get("user-agent", "")))
     return {"guest_id": guest["id"], "result": result_out, "user": _public_user(guest)}
+
+
+@app.api_route("/{path:path}", methods=["GET", "HEAD"], include_in_schema=False)
+def unknown_path(path: str) -> dict[str, str]:
+    if path.startswith("api/") or path == "api":
+        raise HTTPException(404, "Not Found")
+    return {
+        "status": "ok",
+        "service": "AstroLive API",
+        "health": "/api/health",
+        "message": "This host is the API. Open the Vercel frontend for the app.",
+    }

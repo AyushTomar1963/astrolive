@@ -86,7 +86,10 @@ const json = async (res: Promise<Response>) => {
 
 const headers = (): HeadersInit => ({ "Content-Type": "application/json" });
 
-const API_BASE = String(import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
+const API_BASE = String(import.meta.env.VITE_API_URL ?? "")
+  .trim()
+  .replace(/\/$/, "")
+  .replace(/\/api$/, "");
 
 const req = (path: string, init: RequestInit = {}) =>
   fetch(`${API_BASE}${path}`, {
