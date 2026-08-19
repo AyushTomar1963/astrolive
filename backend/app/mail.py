@@ -21,18 +21,16 @@ def send_email(*, to: str, subject: str, html: str, text: str) -> None:
     load_env()
     if not is_production():
         _console_transport(to=to, subject=subject, text=text)
+        user, password = _gmail_creds()
+        if user and password:
+            _gmail_transport(to=to, subject=subject, html=html, text=text)
+        return
 
-    if is_production() and os.environ.get("RESEND_API_KEY", "").strip():
+    # Render (and most PaaS) block SMTP ports 25/465/587. Use HTTPS only.
+    if os.environ.get("RESEND_API_KEY", "").strip():
         _resend_transport(to=to, subject=subject, html=html, text=text)
         return
-
-    user, password = _gmail_creds()
-    if user and password:
-        _gmail_transport(to=to, subject=subject, html=html, text=text)
-        return
-
-    if is_production():
-        raise email_send_failed("no mail transport")
+    raise email_send_failed("resend key missing")
 
 
 def _console_transport(*, to: str, subject: str, text: str) -> None:
@@ -130,13 +128,15 @@ def warn_if_unconfigured() -> None:
     load_env()
     gmail = bool(_gmail_creds()[0])
     resend = bool(os.environ.get("RESEND_API_KEY", "").strip())
-    if is_production() and not gmail and not resend:
+    if is_production() and not resend:
         log.warning(
             "\n============================================================\n"
-            "AstroLive production mail is not configured.\n"
-            "Set RESEND_API_KEY or GMAIL_USER + GMAIL_APP_PASSWORD in backend/.env\n"
+            "Render cannot send Gmail SMTP (port 587 is blocked).\n"
+            "Set RESEND_API_KEY (and optional RESEND_FROM) on this service.\n"
             "============================================================\n"
         )
+    elif is_production() and resend:
+        log.info("Mail transport: Resend HTTPS.")
     elif gmail:
         log.info("Mail transport: Gmail SMTP (inbox delivery on).")
     else:
