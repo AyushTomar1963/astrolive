@@ -1,4 +1,7 @@
 {
+  "installCommand": "cd proto && npm install",
+  "buildCommand": "cd proto && npm run build",
+  "outputDirectory": "proto/dist",
   "rewrites": [
     {
       "source": "/api/:path*",

@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 
 from .gemini import load_env
+from .errors import is_production
 
 
 def _csv(name: str) -> list[str]:
@@ -26,7 +27,11 @@ def frontend_origins() -> list[str]:
 def frontend_origin_regex() -> str | None:
     load_env()
     raw = os.environ.get("FRONTEND_ORIGIN_REGEX", "").strip()
-    return raw or None
+    if raw:
+        return raw
+    if is_production():
+        return r"https://.*\.vercel\.app"
+    return None
 
 
 def cookie_samesite() -> str:
