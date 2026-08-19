@@ -9,7 +9,7 @@ import urllib.error
 import urllib.request
 from email.message import EmailMessage
 
-from .errors import email_send_failed, is_production
+from .errors import AppError, email_send_failed, is_production
 from .gemini import load_env
 
 log = logging.getLogger("astrolive")
@@ -95,14 +95,24 @@ def _resend_transport(*, to: str, subject: str, html: str, text: str) -> None:
         with urllib.request.urlopen(req, timeout=20) as resp:
             if resp.status >= 300:
                 raise email_send_failed(f"resend status {resp.status}")
-    except email_send_failed:
+    except AppError:
         raise
     except urllib.error.HTTPError as exc:
+        detail = _http_error_detail(exc)
         log.exception("resend http error")
-        raise email_send_failed(f"resend {exc.code}") from exc
+        raise email_send_failed(detail) from exc
     except Exception as exc:  # noqa: BLE001
         log.exception("resend send failed")
         raise email_send_failed(str(exc)) from exc
+
+
+def _http_error_detail(exc: urllib.error.HTTPError) -> str:
+    body = ""
+    try:
+        body = exc.read().decode("utf-8", "replace")[:400]
+    except Exception:  # noqa: BLE001
+        body = ""
+    return f"resend {exc.code} {body}".strip()
 
 
 def otp_email_content(code: str) -> tuple[str, str, str]:
