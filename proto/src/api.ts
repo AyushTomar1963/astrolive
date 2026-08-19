@@ -86,8 +86,14 @@ const json = async (res: Promise<Response>) => {
 
 const headers = (): HeadersInit => ({ "Content-Type": "application/json" });
 
+const API_BASE = String(import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
+
 const req = (path: string, init: RequestInit = {}) =>
-  fetch(path, { credentials: "include", ...init, headers: { ...headers(), ...(init.headers || {}) } });
+  fetch(`${API_BASE}${path}`, {
+    credentials: "include",
+    ...init,
+    headers: { ...headers(), ...(init.headers || {}) },
+  });
 
 export type City = { name: string; lat: number; lon: number };
 

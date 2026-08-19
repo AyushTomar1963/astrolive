@@ -21,6 +21,7 @@ from .errors import (
     rate_limited,
     too_many_attempts,
 )
+from .settings import cookie_samesite
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 DOB_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -151,10 +152,12 @@ def mint_opaque_token() -> str:
 
 
 def cookie_kwargs() -> dict:
+    samesite = cookie_samesite()
+    secure = is_production() or samesite == "none"
     return {
         "httponly": True,
-        "secure": is_production(),
-        "samesite": "lax",
+        "secure": secure,
+        "samesite": samesite,
         "path": "/",
     }
 

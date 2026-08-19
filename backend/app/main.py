@@ -53,18 +53,21 @@ from .errors import (
 )
 from .data import ASTROLOGERS, CITIES, MELAPAK_MODES, PRIYA, SAMADHAN
 from . import mail
+from .settings import frontend_origin_regex, frontend_origins
+
+gemini.load_env()
 
 app = FastAPI(title="AstroLive", version="1.2.0")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+_cors: dict[str, Any] = {
+    "allow_origins": frontend_origins(),
+    "allow_credentials": True,
+    "allow_methods": ["*"],
+    "allow_headers": ["*"],
+}
+_origin_re = frontend_origin_regex()
+if _origin_re:
+    _cors["allow_origin_regex"] = _origin_re
+app.add_middleware(CORSMiddleware, **_cors)
 
 User = Annotated[dict, Depends(get_user)]
 MAX_BODY = 32_768
