@@ -89,6 +89,8 @@ def _resend_transport(*, to: str, subject: str, html: str, text: str) -> None:
         headers={
             "Authorization": f"Bearer {key}",
             "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "AstroLive/1.0",
         },
     )
     try:
