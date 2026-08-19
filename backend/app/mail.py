@@ -16,21 +16,28 @@ log = logging.getLogger("astrolive")
 _WARNED = False
 
 
+def _smtp_blocked() -> bool:
+    """Render (and similar PaaS) block outbound SMTP 25/465/587."""
+    return bool(
+        os.environ.get("RENDER", "").strip()
+        or os.environ.get("RENDER_SERVICE_ID", "").strip()
+        or is_production()
+    )
+
+
 def send_email(*, to: str, subject: str, html: str, text: str) -> None:
     """Single outbound mail interface. Swap the production provider here only."""
     load_env()
-    if not is_production():
-        _console_transport(to=to, subject=subject, text=text)
-        user, password = _gmail_creds()
-        if user and password:
-            _gmail_transport(to=to, subject=subject, html=html, text=text)
-        return
+    if _smtp_blocked():
+        if os.environ.get("RESEND_API_KEY", "").strip():
+            _resend_transport(to=to, subject=subject, html=html, text=text)
+            return
+        raise email_send_failed("resend key missing")
 
-    # Render (and most PaaS) block SMTP ports 25/465/587. Use HTTPS only.
-    if os.environ.get("RESEND_API_KEY", "").strip():
-        _resend_transport(to=to, subject=subject, html=html, text=text)
-        return
-    raise email_send_failed("resend key missing")
+    _console_transport(to=to, subject=subject, text=text)
+    user, password = _gmail_creds()
+    if user and password:
+        _gmail_transport(to=to, subject=subject, html=html, text=text)
 
 
 def _console_transport(*, to: str, subject: str, text: str) -> None:
@@ -128,14 +135,14 @@ def warn_if_unconfigured() -> None:
     load_env()
     gmail = bool(_gmail_creds()[0])
     resend = bool(os.environ.get("RESEND_API_KEY", "").strip())
-    if is_production() and not resend:
+    if _smtp_blocked() and not resend:
         log.warning(
             "\n============================================================\n"
             "Render cannot send Gmail SMTP (port 587 is blocked).\n"
             "Set RESEND_API_KEY (and optional RESEND_FROM) on this service.\n"
             "============================================================\n"
         )
-    elif is_production() and resend:
+    elif _smtp_blocked() and resend:
         log.info("Mail transport: Resend HTTPS.")
     elif gmail:
         log.info("Mail transport: Gmail SMTP (inbox delivery on).")
